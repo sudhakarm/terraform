@@ -56,6 +56,5 @@ variable "secret_key" {
 ```
 
 ## Resources
-- Creating an EKS cluster in AWS using terraform module (customized). 
-      documentation here 
-      [EKS Module](https://registry.terraform.io/modules/terraform-aws-modules/eks/aws/latest) | [EKS sample](https://developer.hashicorp.com/terraform/tutorials/kubernetes/eks)
+### 1. Creating an EKS cluster in AWS using terraform module (customized). 
+documentation here >> [EKS Module](https://registry.terraform.io/modules/terraform-aws-modules/eks/aws/latest) | [EKS sample](https://developer.hashicorp.com/terraform/tutorials/kubernetes/eks)
