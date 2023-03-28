@@ -19,7 +19,7 @@ jobs:
       - name: Install Terraform
         uses: hashicorp/setup-terraform@v1
         with:
-          terraform_version: 1.14.0
+          terraform_version: 1.4.2
       - name: Initialize Terraform
         working-directory: aws/eks/
         run: terraform init
