@@ -75,7 +75,7 @@ jobs:
           sudo apt-get install -y kubectl
       - name: Build docker image
         run: |
-          export APP_DOCKER_IMAGE=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          export APP_DOCKER_IMAGE=${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG}
           docker build -t $APP_DOCKER_IMAGE .
           
       - name: Lint and test the python application
