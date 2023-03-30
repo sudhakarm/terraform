@@ -27,7 +27,7 @@ jobs:
         working-directory: aws/eks/
         run: terraform plan
       - name: Apply Terraform
-        working-directory: eks/
+        working-directory: aws/eks/
         run: terraform apply -auto-approve
   Build_and_push :
     needs: Setup_EKS
