@@ -6,31 +6,49 @@ name: Deploy Django app to EKS
 on:
   workflow_dispatch:
 jobs:
-  Setup_EKS:
-    runs-on: ubuntu-latest
-    env:
-      AWS_DEFAULT_REGION: ap-south-1
-      AWS_REGION: ap-south-1
-      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-    steps:
-      - name: Checkout terraform code
-        uses: actions/checkout@v3
-      - name: Install Terraform
-        uses: hashicorp/setup-terraform@v1
-        with:
-          terraform_version: 1.4.2
-      - name: Initialize Terraform
-        working-directory: aws/eks/
-        run: terraform init
-      - name: Plan the configuration
-        working-directory: aws/eks/
-        run: terraform plan
-      - name: Apply Terraform
-        working-directory: aws/eks/
-        run: terraform apply -auto-approve
+#   Check_EKS:
+#     runs-on: ubuntu-latest
+#     env:
+#       AWS_DEFAULT_REGION: ap-south-1
+#       AWS_REGION: ap-south-1
+#       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+#       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+#     steps:
+#       - name: Install AWS CLI
+#         run: |
+#           sudo apt-get update
+#           sudo apt-get install -y python3-pip
+#           sudo pip3 install awscli
+#       - name: Check EKS cluster
+#         run: |
+#           aws eks describe-cluster --region ${{ secrets.AWS_REGION }} --name EKS01-Cluster || echo "EKS cluster not found"
+#         id: eks-cluster-check
+#   Setup_EKS:
+#     if: steps.eks-cluster-check.outcome == 'success'
+#     runs-on: ubuntu-latest
+#     env:
+#       AWS_DEFAULT_REGION: ap-south-1
+#       AWS_REGION: ap-south-1
+#       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+#       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+#     steps:
+#       - name: Checkout terraform code
+#         uses: actions/checkout@v3
+#       - name: Install Terraform
+#         uses: hashicorp/setup-terraform@v1
+#         with:
+#           terraform_version: 1.4.2
+#       - name: Initialize Terraform
+#         working-directory: aws/eks/
+#         run: terraform init
+#       - name: Plan the configuration
+#         working-directory: aws/eks/
+#         run: terraform plan
+#       - name: Apply Terraform
+#         working-directory: aws/eks/
+#         run: terraform apply -auto-approve
   Build_and_push :
-    needs: Setup_EKS
+    #needs: Setup_EKS
     runs-on: ubuntu-latest
     env:
       AWS_DEFAULT_REGION: ap-south-1
@@ -45,23 +63,44 @@ jobs:
       - name: Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1
-      - name: Install AWS CLI
+      - name: Install AWS CLI and K8s
         run: |
           sudo apt-get update
           sudo apt-get install -y python3-pip
           sudo pip3 install awscli
-      - name: Check EKS cluster
+          sudo apt-get install -y apt-transport-https
+          sudo curl --silent --location -o /usr/share/keyrings/kubernetes-archive-keyring.gpg https://packages.cloud.google.com/apt/doc/apt-key.gpg
+          echo "deb [signed-by=/usr/share/keyrings/kubernetes-archive-keyring.gpg] https://apt.kubernetes.io/ kubernetes-xenial main" | sudo tee /etc/apt/sources.list.d/kubernetes.list
+          sudo apt-get update
+          sudo apt-get install -y kubectl
+      - name: Build docker image
         run: |
-          aws eks describe-cluster --region ${{ secrets.AWS_REGION }} --name EKS01-Cluster || echo "EKS cluster not found"
-        id: eks-cluster-check
-      - name: Build and push django image to ECR
+          export APP_DOCKER_IMAGE=${{ $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG }}
+          docker build -t $APP_DOCKER_IMAGE .
+          
+      - name: Lint and test the python application
+        run: |
+          docker run --rm $APP_DOCKER_IMAGE sh -c "pylint --load-plugins pylint_django -- django-settings-module=app.settings **/*.py"
+          docker run --rm $APP_DOCKER_IMAGE sh -c "pytest"
+      - name: Push django image to ECR
         if: steps.eks-cluster-check.outcome == 'success'
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           ECR_REPOSITORY: demo_ecr_django
           IMAGE_TAG: django_app1
         run: |
-          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+      - name: Authenticate with EKS
+        run: aws eks update-kubeconfig --name EKS01-Cluster
+      - name: Deploy to EKS
+        id: k8_deploy
+        run: |
+          kubectl apply -f k8/0env-dev-configmap.yaml
+          kubectl apply -f k8/1db-deploy-svc-pvc.yaml
+          kubectl apply -f k8/2app-deploy-svc-pvc.yaml
+          kubectl apply -f k8/3redis-deploy-svc-pvc.yaml
+          kubectl apply -f k8/4celery-deploy-pvc.yaml
+
+        
 
       
