@@ -1,0 +1,49 @@
+# Workflow to Deploy Django app to ECR EKS using Terraform
+# Authored by : Sudhakar Mangipudi
+# Created Date: 28-Mar-2023
+
+name: Deploy EKS
+on:
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      AWS_DEFAULT_REGION: ap-south-1
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+    steps:
+      - name: Checkout terraform code
+        uses: actions/checkout@v3
+      - name: Checkout django app code
+        uses: actions/checkout@v3
+          with:
+            repository: sudhakarm/django_app1
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+        
+      - name: Build and push django image to ECR
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: demo_ecr_django
+          IMAGE_TAG: django_app1
+        run: |
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+#       - name: Install Terraform
+#         uses: hashicorp/setup-terraform@v1
+#         with:
+#           terraform_version: 1.4.2
+#       - name: Initialize Terraform
+#         working-directory: aws/eks/
+#         run: terraform init
+#       - name: Plan the configuration
+#         working-directory: aws/eks/
+#         run: terraform plan
+      #- name: Apply Terraform
+      #  working-directory: eks/
+      #  run: terraform apply -auto-approve
+
+      
