@@ -78,21 +78,12 @@ jobs:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           ECR_REPOSITORY: demo_ecr_django
           IMAGE_TAG: django_app1
-          APP_DOCKER_IMAGE: $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
         run: |
-          #export APP_DOCKER_IMAGE=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-          echo $APP_DOCKER_IMAGE
-          #docker build -t $APP_DOCKER_IMAGE .
-          #TEST DOCKER IMAGE
-          docker run --rm $APP_DOCKER_IMAGE sh -c "pylint --load-plugins pylint_django -- django-settings-module=app.settings **/*.py"
-          docker run --rm $APP_DOCKER_IMAGE sh -c "pytest"
-      - name: Push django image to ECR
-        if: steps.eks-cluster-check.outcome == 'success'
-        env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          ECR_REPOSITORY: demo_ecr_django
-          IMAGE_TAG: django_app1
-        run: |
+          #docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          # Testing the docker image
+          docker run --rm $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG sh -c "pylint --load-plugins pylint_django -- django-settings-module=app.settings **/*.py"
+          docker run --rm $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG sh -c "pytest"
+          # Push django image to ECR
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
       - name: Authenticate with EKS
         run: aws eks update-kubeconfig --name EKS01-Cluster
