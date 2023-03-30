@@ -54,6 +54,7 @@ module "eks" {
     version = "19.10.0"
     vpc_id     = module.vpc.vpc_id
     subnet_ids = module.vpc.private_subnets
+    endpoint_public_access = true
     
     cluster_name = local.cluster_name
     # default cri is docker
