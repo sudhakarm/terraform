@@ -83,10 +83,7 @@ jobs:
           #export APP_DOCKER_IMAGE=${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG}
           echo $APP_DOCKER_IMAGE
           #docker build -t $APP_DOCKER_IMAGE .
-          
-      - name: Lint and test the python application
-        run: |
-          echo $APP_DOCKER_IMAGE
+          #TEST DOCKER IMAGE
           docker run --rm $APP_DOCKER_IMAGE sh -c "pylint --load-plugins pylint_django -- django-settings-module=app.settings **/*.py"
           docker run --rm $APP_DOCKER_IMAGE sh -c "pytest"
       - name: Push django image to ECR
